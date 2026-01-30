@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>แดชบอร์ด | แอดมิน - เลิศรสโรตี</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: "Prompt", sans-serif; }
+    .gradient-header {
+      background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+    }
+    .card-hover {
+      transition: all 0.3s ease;
+    }
+    .card-hover:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+    }
+    /* Custom scrollbar for order details */
+    .details-content::-webkit-scrollbar {
+      width: 6px;
+    }
+    .details-content::-webkit-scrollbar-track {
+      background: #f1f1f1;
+    }
+    .details-content::-webkit-scrollbar-thumb {
+      background: #dc2626;
+      border-radius: 3px;
+    }
+  </style>
+<base target="_blank">
+</head>
+<body class="bg-gray-100 min-h-screen">
+
+  <!-- Header -->
+  <header class="gradient-header text-white shadow-lg sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
+      <div class="flex items-center space-x-3">
+        <span class="text-3xl">📊</span>
+        <div>
+          <h1 class="text-xl font-bold">แดชบอร์ดคำสั่งซื้อ</h1>
+          <p class="text-xs opacity-90">จัดการออเดอร์และสถานะ</p>
+        </div>
+      </div>
+      <div class="flex space-x-2">
+        <a href="admin.html" class="bg-white/20 text-white px-4 py-2 rounded-full text-sm font-semibold hover:bg-white/30 transition backdrop-blur">
+          ⚙️ จัดการเมนู
+        </a>
+        <a href="menu.html" class="bg-white text-red-700 px-4 py-2 rounded-full text-sm font-bold hover:bg-red-50 transition">
+          ← กลับหน้าร้าน
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-7xl mx-auto px-4 py-8">
+    
+    <!-- Stats Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+      <div class="bg-white rounded-xl shadow p-6 border-l-4 border-yellow-500">
+        <div class="flex justify-between items-start">
+          <div>
+            <p class="text-gray-500 text-sm">รอตรวจสอบ</p>
+            <p class="text-3xl font-bold text-gray-800" id="countPending">0</p>
+          </div>
+          <span class="text-2xl">⏳</span>
+        </div>
+      </div>
+      
+      <div class="bg-white rounded-xl shadow p-6 border-l-4 border-blue-500">
+        <div class="flex justify-between items-start">
+          <div>
+            <p class="text-gray-500 text-sm">ชำระเงินแล้ว</p>
+            <p class="text-3xl font-bold text-gray-800" id="countPaid">0</p>
+          </div>
+          <span class="text-2xl">💳</span>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-xl shadow p-6 border-l-4 border-purple-500">
+        <div class="flex justify-between items-start">
+          <div>
+            <p class="text-gray-500 text-sm">กำลังทำ</p>
+            <p class="text-3xl font-bold text-gray-800" id="countCooking">0</p>
+          </div>
+          <span class="text-2xl">👨‍🍳</span>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-xl shadow p-6 border-l-4 border-green-500">
+        <div class="flex justify-between items-start">
+          <div>
+            <p class="text-gray-500 text-sm">ยอดขายวันนี้</p>
+            <p class="text-2xl font-bold text-gray-800" id="todayRevenue">0 บาท</p>
+          </div>
+          <span class="text-2xl">💰</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Filter Controls -->
+    <div class="bg-white rounded-xl shadow-lg p-4 mb-6">
+      <div class="flex flex-wrap gap-3 items-center justify-between">
+        <div class="flex gap-2 overflow-x-auto pb-1">
+          <button onclick="filterOrders('all')" class="filter-btn active px-4 py-2 rounded-full text-sm font-semibold bg-red-600 text-white transition" data-filter="all">
+            ทั้งหมด
+          </button>
+          <button onclick="filterOrders('รอตรวจสอบการชำระเงิน')" class="filter-btn px-4 py-2 rounded-full text-sm font-semibold bg-yellow-100 text-yellow-800 hover:bg-yellow-200 transition" data-filter="รอตรวจสอบการชำระเงิน">
+            ⏳ รอตรวจสอบ
+          </button>
+          <button onclick="filterOrders('ชำระเงินแล้ว')" class="filter-btn px-4 py-2 rounded-full text-sm font-semibold bg-blue-100 text-blue-800 hover:bg-blue-200 transition" data-filter="ชำระเงินแล้ว">
+            💳 ชำระเงินแล้ว
+          </button>
+          <button onclick="filterOrders('กำลังทำ')" class="filter-btn px-4 py-2 rounded-full text-sm font-semibold bg-purple-100 text-purple-800 hover:bg-purple-200 transition" data-filter="กำลังทำ">
+            👨‍🍳 กำลังทำ
+          </button>
+          <button onclick="filterOrders('ทำเสร็จแล้ว')" class="filter-btn px-4 py-2 rounded-full text-sm font-semibold bg-green-100 text-green-800 hover:bg-green-200 transition" data-filter="ทำเสร็จแล้ว">
+            ✨ เสร็จแล้ว
+          </button>
+          <button onclick="filterOrders('ยกเลิกคำสั่งซื้อแล้ว')" class="filter-btn px-4 py-2 rounded-full text-sm font-semibold bg-red-100 text-red-800 hover:bg-red-200 transition" data-filter="ยกเลิกคำสั่งซื้อแล้ว">
+            ❌ ยกเลิก
+          </button>
+        </div>
+        
+        <div class="flex gap-2">
+          <input type="text" id="searchOrder" placeholder="ค้นหาเลขออเดอร์..." 
+            class="border-2 border-gray-300 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-red-500 focus:border-red-500"
+            onkeyup="searchOrders(this.value)">
+          <button onclick="refreshOrders()" class="bg-gray-100 hover:bg-gray-200 px-4 py-2 rounded-lg text-sm font-semibold transition" title="รีเฟรช">
+            🔄
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Orders Grid -->
+    <div id="ordersContainer" class="space-y-4">
+      <div class="text-center py-12">
+        <div class="animate-spin rounded-full h-12 w-12 border-b-4 border-red-600 mx-auto mb-4"></div>
+        <p class="text-gray-600">กำลังโหลดคำสั่งซื้อ...</p>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Status Update Modal -->
+  <div id="statusModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-md transform transition-all">
+      <h3 class="text-xl font-bold mb-4">อัพเดทสถานะคำสั่งซื้อ</h3>
+      <p class="text-gray-600 mb-4 text-sm">เลขออเดอร์: <span id="modalOrderNum" class="font-mono font-bold text-lg text-red-700"></span></p>
+      
+      <div class="space-y-2 mb-6">
+        <select id="newStatus" class="w-full border-2 border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-red-500">
+          <option value="รอตรวจสอบการชำระเงิน">⏳ รอตรวจสอบการชำระเงิน</option>
+          <option value="ชำระเงินแล้ว">💳 ชำระเงินแล้ว</option>
+          <option value="กำลังทำ">👨‍🍳 กำลังทำ</option>
+          <option value="ทำเสร็จแล้ว">✨ ทำเสร็จแล้ว</option>
+          <option value="ยกเลิกคำสั่งซื้อแล้ว">❌ ยกเลิกคำสั่งซื้อแล้ว</option>
+        </select>
+      </div>
+
+      <div class="flex gap-3">
+        <button onclick="closeModal()" class="flex-1 py-3 rounded-lg bg-gray-200 text-gray-800 font-semibold hover:bg-gray-300 transition">
+          ยกเลิก
+        </button>
+        <button onclick="confirmUpdateStatus()" class="flex-1 py-3 rounded-lg bg-red-600 text-white font-semibold hover:bg-red-700 transition">
+          บันทึก
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { auth, getAllOrders, updateOrderStatus, deleteOrderById, adminEmail } from "./firebase.js";
+    import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+
+    const ordersContainer = document.getElementById("ordersContainer");
+    let allOrders = [];
+    let currentFilter = 'all';
+    let selectedOrderId = null;
+
+    // Status colors mapping
+    const statusColors = {
+      "รอตรวจสอบการชำระเงิน": "bg-yellow-100 text-yellow-800 border-yellow-200",
+      "ชำระเงินแล้ว": "bg-blue-100 text-blue-800 border-blue-200",
+      "กำลังทำ": "bg-purple-100 text-purple-800 border-purple-200",
+      "ทำเสร็จแล้ว": "bg-green-100 text-green-800 border-green-200",
+      "ยกเลิกคำสั่งซื้อแล้ว": "bg-red-100 text-red-800 border-red-200"
+    };
+
+    const statusFlow = {
+      "รอตรวจสอบการชำระเงิน": "ชำระเงินแล้ว",
+      "ชำระเงินแล้ว": "กำลังทำ",
+      "กำลังทำ": "ทำเสร็จแล้ว"
+    };
+
+    // Auth check
+    onAuthStateChanged(auth, async (user) => {
+      if (!user || user.email !== adminEmail) {
+        alert("⛔ ไม่มีสิทธิ์เข้าถึง - ต้องเป็นแอดมินเท่านั้น");
+        window.location.href = "menu.html";
+        return;
+      }
+      await loadOrders();
+    });
+
+    async function loadOrders() {
+      try {
+        ordersContainer.innerHTML = `
+          <div class="text-center py-12">
+            <div class="animate-spin rounded-full h-12 w-12 border-b-4 border-red-600 mx-auto mb-4"></div>
+            <p class="text-gray-600">กำลังโหลดคำสั่งซื้อ...</p>
+          </div>
+        `;
+        
+        allOrders = await getAllOrders();
+        updateStats();
+        renderOrders();
+      } catch (err) {
+        console.error(err);
+        ordersContainer.innerHTML = `
+          <div class="bg-red-50 border-l-4 border-red-500 p-4 rounded-lg">
+            <p class="text-red-700 font-semibold">❌ โหลดข้อมูลไม่สำเร็จ</p>
+            <p class="text-sm text-red-600 mt-1">${err.message}</p>
+            <button onclick="location.reload()" class="mt-3 text-sm underline">ลองใหม่</button>
+          </div>
+        `;
+      }
+    }
+
+    function updateStats() {
+      const today = new Date().toDateString();
+      
+      const pending = allOrders.filter(o => o.status === "รอตรวจสอบการชำระเงิน").length;
+      const paid = allOrders.filter(o => o.status === "ชำระเงินแล้ว").length;
+      const cooking = allOrders.filter(o => o.status === "กำลังทำ").length;
+      
+      const todayRevenue = allOrders
+        .filter(o => o.status === "ทำเสร็จแล้ว" && o.createdAt?.toDate()?.toDateString() === today)
+        .reduce((sum, o) => sum + (o.total || 0), 0);
+
+      document.getElementById("countPending").textContent = pending;
+      document.getElementById("countPaid").textContent = paid;
+      document.getElementById("countCooking").textContent = cooking;
+      document.getElementById("todayRevenue").textContent = todayRevenue.toLocaleString() + " บาท";
+    }
+
+    function renderOrders() {
+      let filtered = allOrders;
+      
+      if (currentFilter !== 'all') {
+        filtered = allOrders.filter(o => o.status === currentFilter);
+      }
+
+      if (filtered.length === 0) {
+        ordersContainer.innerHTML = `
+          <div class="bg-white rounded-xl shadow p-12 text-center">
+            <span class="text-6xl mb-4 block">📭</span>
+            <p class="text-gray-500 text-lg">ไม่พบคำสั่งซื้อในหมวดหมู่นี้</p>
+          </div>
+        `;
+        return;
+      }
+
+      // Sort by createdAt desc
+      filtered.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+
+      ordersContainer.innerHTML = filtered.map(order => {
+        const dateStr = order.createdAt?.toDate ? 
+          order.createdAt.toDate().toLocaleString('th-TH', {
+            year: 'numeric', month: 'long', day: 'numeric', 
+            hour: '2-digit', minute: '2-digit'
+          }) : '-';
+        
+        const statusClass = statusColors[order.status] || "bg-gray-100 text-gray-800";
+        const nextStatus = statusFlow[order.status];
+        const canProgress = nextStatus && order.status !== "ยกเลิกคำสั่งซื้อแล้ว" && order.status !== "ทำเสร็จแล้ว";
+        
+        const orderNum = order.orderNumber || `#${order.id.slice(-6)}`;
+
+        return `
+          <div class="bg-white rounded-xl shadow-lg overflow-hidden card-hover border border-gray-100">
+            <!-- Header -->
+            <div class="p-5 border-b border-gray-100 bg-gray-50/50">
+              <div class="flex flex-wrap justify-between items-start gap-3">
+                <div>
+                  <div class="flex items-center gap-2 mb-1">
+                    <span class="font-mono font-bold text-xl text-red-700">${orderNum}</span>
+                    <span class="px-3 py-1 rounded-full text-xs font-bold border ${statusClass}">
+                      ${order.status}
+                    </span>
+                  </div>
+                  <p class="text-sm text-gray-600">
+                    📅 ${dateStr} | 👤 ${order.userName || order.userEmail || 'ไม่ระบุ'}
+                  </p>
+                </div>
+                <div class="text-right">
+                  <p class="text-2xl font-bold text-red-600">${(order.total || 0).toLocaleString()} บาท</p>
+                  <p class="text-xs text-gray-500">${order.items?.length || 0} รายการ</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Items Details -->
+            <div class="p-5">
+              <details class="group">
+                <summary class="cursor-pointer text-sm font-semibold text-gray-700 hover:text-gray-900 mb-2 select-none flex justify-between items-center">
+                  <span>📋 ดูรายการสินค้า (${order.items?.length || 0})</span>
+                  <span class="transform group-open:rotate-180 transition">▼</span>
+                </summary>
+                <div class="mt-3 space-y-2 details-content max-h-60 overflow-y-auto pr-2">
+                  ${(order.items || []).map(item => `
+                    <div class="flex justify-between items-start py-2 border-b border-gray-100 last:border-0">
+                      <div class="flex-1">
+                        <p class="font-medium text-gray-800">${item.name} × ${item.qty}</p>
+                        ${item.note ? `<p class="text-xs text-gray-500 mt-0.5">หมายเหตุ: ${item.note}</p>` : ''}
+                      </div>
+                      <p class="font-semibold text-gray-700">${(item.price * item.qty).toLocaleString()} บาท</p>
+                    </div>
+                  `).join('')}
+                </div>
+              </details>
+            </div>
+
+            <!-- Actions -->
+            <div class="px-5 py-4 bg-gray-50 border-t border-gray-100 flex flex-wrap gap-2 justify-end">
+              ${canProgress ? `
+                <button onclick="quickUpdateStatus('${order.id}', '${nextStatus}')" 
+                  class="px-4 py-2 rounded-lg bg-green-600 text-white text-sm font-semibold hover:bg-green-700 transition flex items-center gap-1">
+                  ✅ ${nextStatus}
+                </button>
+              ` : ''}
+              
+              <button onclick="openStatusModal('${order.id}', '${order.orderNumber || order.id.slice(-6)}', '${order.status}')" 
+                class="px-4 py-2 rounded-lg bg-blue-100 text-blue-700 text-sm font-semibold hover:bg-blue-200 transition">
+                ✏️ แก้ไขสถานะ
+              </button>
+              
+              <button onclick="deleteOrder('${order.id}', '${orderNum}')" 
+                class="px-4 py-2 rounded-lg bg-red-100 text-red-700 text-sm font-semibold hover:bg-red-200 transition">
+                🗑️ ลบ
+              </button>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // Global functions
+    window.filterOrders = (status) => {
+      currentFilter = status;
+      
+      // Update button styles
+      document.querySelectorAll('.filter-btn').forEach(btn => {
+        if (btn.dataset.filter === status) {
+          btn.classList.remove('bg-white', 'text-gray-700', 'bg-yellow-100', 'text-yellow-800', 'bg-blue-100', 'text-blue-800', 'bg-purple-100', 'text-purple-800', 'bg-green-100', 'text-green-800', 'bg-red-100', 'text-red-800');
+          btn.classList.add('bg-red-600', 'text-white');
+        } else {
+          btn.classList.remove('bg-red-600', 'text-white');
+          // Restore original colors based on filter type
+          const filter = btn.dataset.filter;
+          const colorMap = {
+            'all': 'bg-white text-gray-700',
+            'รอตรวจสอบการชำระเงิน': 'bg-yellow-100 text-yellow-800',
+            'ชำระเงินแล้ว': 'bg-blue-100 text-blue-800',
+            'กำลังทำ': 'bg-purple-100 text-purple-800',
+            'ทำเสร็จแล้ว': 'bg-green-100 text-green-800',
+            'ยกเลิกคำสั่งซื้อแล้ว': 'bg-red-100 text-red-800'
+          };
+          btn.classList.add(...colorMap[filter].split(' '));
+        }
+      });
+      
+      renderOrders();
+    };
+
+    window.searchOrders = (query) => {
+      if (!query) {
+        renderOrders();
+        return;
+      }
+      
+      const searchTerm = query.toLowerCase();
+      const filtered = allOrders.filter(o => 
+        (o.orderNumber || '').toLowerCase().includes(searchTerm) ||
+        (o.userEmail || '').toLowerCase().includes(searchTerm) ||
+        (o.userName || '').toLowerCase().includes(searchTerm) ||
+        o.id.toLowerCase().includes(searchTerm)
+      );
+      
+      // Temporarily replace allOrders for rendering
+      const originalOrders = allOrders;
+      allOrders = filtered;
+      renderOrders();
+      allOrders = originalOrders;
+    };
+
+    window.refreshOrders = () => {
+      loadOrders();
+    };
+
+    window.quickUpdateStatus = async (orderId, newStatus) => {
+      if (!confirm(`เปลี่ยนสถานะเป็น "${newStatus}" ใช่หรือไม่?`)) return;
+      
+      try {
+        await updateOrderStatus(orderId, newStatus);
+        alert("✅ อัพเดทสถานะสำเร็จ");
+        await loadOrders();
+      } catch (err) {
+        alert("❌ อัพเดทไม่สำเร็จ: " + err.message);
+      }
+    };
+
+    window.openStatusModal = (orderId, orderNum, currentStatus) => {
+      selectedOrderId = orderId;
+      document.getElementById("modalOrderNum").textContent = orderNum;
+      document.getElementById("newStatus").value = currentStatus;
+      document.getElementById("statusModal").classList.remove("hidden");
+    };
+
+    window.closeModal = () => {
+      document.getElementById("statusModal").classList.add("hidden");
+      selectedOrderId = null;
+    };
+
+    window.confirmUpdateStatus = async () => {
+      if (!selectedOrderId) return;
+      
+      const newStatus = document.getElementById("newStatus").value;
+      
+      try {
+        await updateOrderStatus(selectedOrderId, newStatus);
+        closeModal();
+        alert("✅ อัพเดทสถานะสำเร็จ");
+        await loadOrders();
+      } catch (err) {
+        alert("❌ อัพเดทไม่สำเร็จ: " + err.message);
+      }
+    };
+
+    window.deleteOrder = async (orderId, orderNum) => {
+      if (!confirm(`⚠️ ต้องการลบคำสั่งซื้อ ${orderNum} ใช่หรือไม่?\n\nการกระทำนี้ไม่สามารถย้อนกลับได้!`)) return;
+      
+      try {
+        await deleteOrderById(orderId);
+        alert("✅ ลบคำสั่งซื้อสำเร็จ");
+        await loadOrders();
+      } catch (err) {
+        alert("❌ ลบไม่สำเร็จ: " + err.message);
+      }
+    };
+
+    // Close modal when clicking outside
+    document.getElementById("statusModal").addEventListener("click", (e) => {
+      if (e.target.id === "statusModal") closeModal();
+    });
+  </script>
+</body>
+</html>
