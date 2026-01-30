@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>ชำระเงิน</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+<style>body{font-family:"Prompt",sans-serif;}</style>
+</head>
+<body class="bg-orange-50 p-6 min-h-screen flex flex-col items-center">
+
+<h1 class="text-xl font-bold mb-4">ชำระเงิน</h1>
+
+<div id="card" class="bg-white p-6 rounded-xl shadow w-full max-w-md text-center">
+  <div id="orderInfo" class="mb-4 text-left"></div>
+  <img id="qr" src="qr.jpg" alt="QR" class="w-64 mx-auto mb-4">
+  <div class="text-2xl font-bold text-red-600 mb-4" id="amount">0 บาท</div>
+
+  <div class="flex gap-3 justify-center">
+    <button id="backBtn" class="px-4 py-2 rounded bg-gray-200">กลับไปที่ตะกร้า</button>
+    <button id="confirmBtn" class="px-4 py-2 rounded bg-green-600 text-white">ยืนยันการชำระเงิน</button>
+  </div>
+</div>
+
+<script type="module">
+import { auth, getOrderById, updateOrderStatus } from "./firebase.js";
+import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+
+const orderInfoEl = document.getElementById("orderInfo");
+const amountEl = document.getElementById("amount");
+const confirmBtn = document.getElementById("confirmBtn");
+const backBtn = document.getElementById("backBtn");
+const qrEl = document.getElementById("qr");
+
+let currentOrderId = localStorage.getItem("currentOrderId");
+
+if (!currentOrderId) {
+  alert("ไม่พบคำสั่งซื้อที่ต้องชำระเงิน");
+  window.location.href = "cart.html";
+}
+
+async function loadOrder() {
+  try {
+    const order = await getOrderById(currentOrderId);
+    if (!order) {
+      alert("คำสั่งซื้อไม่ถูกต้อง");
+      window.location.href = "cart.html";
+      return;
+    }
+    // render details
+    const dateStr = order.createdAt && order.createdAt.toDate ? order.createdAt.toDate().toLocaleString() : "";
+    orderInfoEl.innerHTML = `
+      <p><b>Order ID:</b> ${order.id}</p>
+      <p><b>ผู้สั่ง:</b> ${order.userName || order.userEmail}</p>
+      <p><b>วันที่:</b> ${dateStr}</p>
+      <p class="mt-2"><b>รายการ:</b></p>
+      <ul class="text-sm list-disc ml-5">${(order.items || []).map(i => `<li>${i.name} x ${i.qty} ${i.note ? `(${i.note})` : ""} — ${i.price * i.qty} บาท</li>`).join("")}</ul>
+    `;
+    amountEl.textContent = (order.total || 0) + " บาท";
+    // Optionally: change QR based on amount (not implemented) — keep static qr.jpg for now
+  } catch (err) {
+    alert("โหลดคำสั่งซื้อไม่สำเร็จ: " + err.message);
+    console.error(err);
+    window.location.href = "cart.html";
+  }
+}
+
+confirmBtn.onclick = async () => {
+  if (!confirm("ยืนยันว่าชำระเงินเรียบร้อยแล้วหรือไม่?")) return;
+  try {
+    await updateOrderStatus(currentOrderId, "ชำระเงินแล้ว");
+    alert("อัปเดตสถานะเป็น 'ชำระเงินแล้ว'");
+    // clear currentOrderId and go to orders
+    localStorage.removeItem("currentOrderId");
+    window.location.href = "orders.html";
+  } catch (err) {
+    alert("ยืนยันการชำระเงินไม่สำเร็จ: " + err.message);
+  }
+};
+
+backBtn.onclick = () => {
+  window.location.href = "cart.html";
+};
+
+onAuthStateChanged(auth, (user) => {
+  if (!user) {
+    // allow viewing? We require auth for order creation; but optionally check
+    // window.location.href = "index.html";
+  }
+  loadOrder();
+  
+});
+</script>
+</body>
+</html>

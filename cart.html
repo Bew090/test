@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="th">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ตะกร้าสินค้า | เลิศรสโรตี</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: "Prompt", sans-serif;
+    }
+
+    .gradient-header {
+      background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+    }
+  </style>
+</head>
+
+<body class="bg-gradient-to-br from-orange-50 to-amber-100 min-h-screen">
+
+  <!-- Header -->
+  <header class="gradient-header text-white shadow-lg">
+    <div class="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
+      <div class="flex items-center space-x-3">
+        <span class="text-3xl">🛒</span>
+        <div>
+          <h1 class="text-xl font-bold">ตะกร้าสินค้า</h1>
+          <p class="text-xs opacity-90">เลิศรสโรตี</p>
+        </div>
+      </div>
+
+      <nav class="flex items-center space-x-2">
+        <a href="menu.html"
+          class="bg-white text-red-700 px-4 py-2 rounded-full text-sm font-semibold hover:bg-red-50 transition">
+          🏠 เมนู
+        </a>
+        <a href="cart.html"
+          class="bg-white text-red-700 px-4 py-2 rounded-full text-sm font-semibold hover:bg-red-50 transition">
+          🛒 ตะกร้า
+        </a>
+        <a href="orders.html"
+          class="bg-white text-red-700 px-4 py-2 rounded-full text-sm font-semibold hover:bg-red-50 transition">
+          📦 คำสั่งซื้อ
+        </a>
+        <button id="logoutBtn"
+          class="bg-yellow-400 text-red-700 px-4 py-2 rounded-full text-sm font-bold hover:bg-yellow-300 transition">
+          🚪 ออกจากระบบ
+        </button>
+      </nav>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="max-w-4xl mx-auto px-4 py-8">
+    <!-- Cart Items -->
+    <div id="cartList" class="space-y-4 mb-6">
+      <!-- Items will be rendered here -->
+    </div>
+
+    <!-- Empty Cart State -->
+    <div id="emptyCart" class="hidden bg-white rounded-2xl shadow-lg p-12 text-center">
+      <span class="text-6xl mb-4 block">🛒</span>
+      <h2 class="text-2xl font-bold text-gray-800 mb-2">ตะกร้าว่างเปล่า</h2>
+      <p class="text-gray-600 mb-6">ยังไม่มีสินค้าในตะกร้า กรุณาเลือกเมนูที่ต้องการ</p>
+      <a href="menu.html"
+        class="inline-block bg-red-600 text-white px-8 py-3 rounded-lg font-semibold hover:bg-red-700 transition">
+        🍽️ ดูเมนู
+      </a>
+    </div>
+
+    <!-- Summary Card -->
+    <div id="summaryCard" class="hidden bg-white rounded-2xl shadow-lg p-6">
+      <div class="flex justify-between items-center mb-4">
+        <span class="text-lg font-semibold text-gray-700">รวมทั้งหมด</span>
+        <span id="totalPrice" class="text-3xl font-bold text-red-600">0 บาท</span>
+      </div>
+
+      <div class="grid grid-cols-2 gap-3">
+        <a href="menu.html"
+          class="bg-gray-200 text-gray-800 py-3 rounded-lg font-semibold text-center hover:bg-gray-300 transition">
+          ← กลับไปเลือกเมนู
+        </a>
+        <button id="checkoutBtn"
+          class="bg-gradient-to-r from-green-600 to-green-700 text-white py-3 rounded-lg font-semibold hover:from-green-700 hover:to-green-800 transition shadow-md">
+          ✅ ยืนยันสั่งซื้อ
+        </button>
+      </div>
+
+      <div class="mt-4 text-center text-sm text-gray-500">
+        <p>💳 ชำระเงินผ่าน QR Code หลังยืนยันคำสั่งซื้อ</p>
+      </div>
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <footer class="bg-gray-800 text-white py-6 mt-20">
+    <div class="max-w-7xl mx-auto px-4 text-center text-sm">
+      <p>📍 91 ถนนสิหราชเดโช ตำบลทะเลชุบศร อำเภอเมือง ลพบุรี</p>
+      <p class="mt-2">☎ โทร 062-248-7887</p>
+    </div>
+  </footer>
+
+  <script type="module">
+    import { auth, placeOrder, createOrder, logoutUser } from "./firebase.js";
+    import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+    let cart = JSON.parse(localStorage.getItem("cart")) || [];
+
+    const cartListEl = document.getElementById("cartList");
+    const emptyCartEl = document.getElementById("emptyCart");
+    const summaryCardEl = document.getElementById("summaryCard");
+    const totalPriceEl = document.getElementById("totalPrice");
+    const checkoutBtn = document.getElementById("checkoutBtn");
+    const logoutBtn = document.getElementById("logoutBtn");
+
+    function renderCart() {
+      cartListEl.innerHTML = "";
+
+      if (cart.length === 0) {
+        cartListEl.classList.add("hidden");
+        emptyCartEl.classList.remove("hidden");
+        summaryCardEl.classList.add("hidden");
+        return;
+      }
+
+      cartListEl.classList.remove("hidden");
+      emptyCartEl.classList.add("hidden");
+      summaryCardEl.classList.remove("hidden");
+
+      let total = 0;
+
+      cart.forEach((item, index) => {
+        total += item.price * item.qty;
+
+        const itemCard = document.createElement("div");
+        itemCard.className = "bg-white rounded-xl shadow-lg p-5 flex gap-4";
+
+        const imgSrc = item.imageUrl || "https://via.placeholder.com/100x100/ff6b6b/ffffff?text=โรตี";
+
+        itemCard.innerHTML = `
+          <div class="flex-shrink-0">
+            <img src="${imgSrc}" alt="${item.name}" class="w-24 h-24 object-cover rounded-lg">
+          </div>
+
+          <div class="flex-1">
+            <h3 class="text-lg font-bold text-gray-800 mb-1">${item.name}</h3>
+            <p class="text-sm text-gray-600 mb-3">ราคา ${item.price} บาท</p>
+            
+            <div class="grid grid-cols-2 gap-2 mb-2">
+              <div>
+                <label class="block text-xs font-medium text-gray-600 mb-1">จำนวน</label>
+                <input 
+                  type="number" 
+                  min="1" 
+                  value="${item.qty}" 
+                  class="qtyInput w-full border-2 border-gray-300 rounded-lg p-2 text-center focus:ring-2 focus:ring-red-500" 
+                  data-index="${index}"
+                >
+              </div>
+              <div>
+                <label class="block text-xs font-medium text-gray-600 mb-1">ราคารวม</label>
+                <div class="text-center text-lg font-bold text-red-600 bg-red-50 rounded-lg p-2">
+                  ${item.price * item.qty} บาท
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-xs font-medium text-gray-600 mb-1">หมายเหตุ</label>
+              <input 
+                type="text" 
+                value="${item.note || ''}" 
+                placeholder="เช่น ไม่ใส่นมข้นหวาน"
+                class="noteInput w-full border-2 border-gray-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-red-500" 
+                data-index="${index}"
+              >
+            </div>
+          </div>
+
+          <div class="flex-shrink-0">
+            <button 
+              class="deleteBtn bg-red-100 hover:bg-red-200 text-red-600 p-3 rounded-lg transition" 
+              data-index="${index}"
+              title="ลบสินค้า"
+            >
+              🗑️
+            </button>
+          </div>
+        `;
+
+        cartListEl.appendChild(itemCard);
+      });
+
+      totalPriceEl.textContent = total.toLocaleString() + " บาท";
+
+      // Attach event listeners
+      document.querySelectorAll(".qtyInput").forEach(el => {
+        el.onchange = (e) => {
+          const index = Number(e.target.dataset.index);
+          cart[index].qty = Math.max(1, parseInt(e.target.value) || 1);
+          saveCart();
+        };
+      });
+
+      document.querySelectorAll(".noteInput").forEach(el => {
+        el.onchange = (e) => {
+          const index = Number(e.target.dataset.index);
+          cart[index].note = e.target.value.trim();
+          saveCart();
+        };
+      });
+
+      document.querySelectorAll(".deleteBtn").forEach(el => {
+        el.onclick = (e) => {
+          const index = Number(e.target.dataset.index);
+          if (confirm(`🗑️ ต้องการลบ "${cart[index].name}" ออกจากตะกร้าใช่หรือไม่?`)) {
+            cart.splice(index, 1);
+            saveCart();
+          }
+        };
+      });
+    }
+
+    function saveCart() {
+      localStorage.setItem("cart", JSON.stringify(cart));
+      renderCart();
+    }
+
+    // Checkout handler
+    checkoutBtn.onclick = async () => {
+      if (cart.length === 0) {
+        alert("⚠️ ไม่มีสินค้าในตะกร้า");
+        return;
+      }
+
+      const user = auth.currentUser;
+      if (!user) {
+        alert("⚠️ กรุณาเข้าสู่ระบบก่อนสั่งซื้อ");
+        window.location.href = "index.html";
+        return;
+      }
+
+      const total = cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
+
+      if (!confirm(`💰 ยืนยันการสั่งซื้อ\n\nยอดรวม: ${total.toLocaleString()} บาท\n\nต้องการดำเนินการต่อหรือไม่?`)) {
+        return;
+      }
+
+      checkoutBtn.disabled = true;
+      checkoutBtn.textContent = "กำลังดำเนินการ...";
+
+      try {
+        const order = {
+          items: cart,
+          total: total
+        };
+
+        const result = await createOrder(user.uid, order);
+        const orderId = result.id;
+
+        // Save order ID for checkout page
+        localStorage.setItem("currentOrderId", orderId);
+
+        // Clear cart
+        localStorage.removeItem("cart");
+        cart = [];
+
+        alert("✅ สร้างคำสั่งซื้อเรียบร้อย!\n\nกำลังไปหน้าชำระเงิน...");
+        window.location.href = "checkout.html";
+
+      } catch (err) {
+        console.error(err);
+        alert("❌ สร้างคำสั่งซื้อไม่สำเร็จ: " + err.message);
+      } finally {
+        checkoutBtn.disabled = false;
+        checkoutBtn.textContent = "✅ ยืนยันสั่งซื้อ";
+      }
+    };
+
+    // Logout handler
+    logoutBtn.onclick = async () => {
+      if (!confirm("🤔 คุณต้องการออกจากระบบใช่หรือไม่?")) return;
+
+      try {
+        const m = await import("./firebase.js");
+        await m.logoutUser();
+        alert("✅ ออกจากระบบเรียบร้อย");
+        window.location.href = "index.html";
+      } catch (err) {
+        alert("❌ ออกจากระบบไม่สำเร็จ: " + err.message);
+      }
+    };
+
+    // Auth check
+    onAuthStateChanged(auth, (user) => {
+      if (!user) {
+        // Allow viewing cart but show warning
+        const warning = document.createElement("div");
+        warning.className = "bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-4 rounded-lg";
+        warning.innerHTML = `
+          <p class="font-bold">⚠️ คุณยังไม่ได้เข้าสู่ระบบ</p>
+          <p class="text-sm">กรุณาเข้าสู่ระบบเพื่อสั่งซื้อ <a href="index.html" class="underline font-semibold">คลิกที่นี่</a></p>
+        `;
+        document.querySelector("main").prepend(warning);
+      }
+    });
+
+    // Initial render
+    renderCart();
+  </script>
+</body>
+
+</html>

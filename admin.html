@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<title>ระบบจัดการร้าน | เลิศรสโรตี</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  body{font-family:"Prompt",sans-serif;}
+  .tab-active { border-bottom: 3px solid #dc2626; color: #dc2626; font-weight: 600; }
+  .status-badge {
+    padding: 4px 12px;
+    border-radius: 9999px;
+    font-size: 0.875rem;
+    font-weight: 500;
+  }
+  .fade-in { animation: fadeIn 0.3s ease-in; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+  
+  /* Custom scrollbar */
+  ::-webkit-scrollbar { width: 8px; }
+  ::-webkit-scrollbar-track { background: #f1f1f1; }
+  ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+  ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+</style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+
+<header class="bg-red-700 text-white shadow-lg">
+  <div class="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
+    <div class="flex items-center gap-3">
+      <div class="bg-white text-red-700 rounded-lg w-10 h-10 flex items-center justify-center font-bold text-lg">แอดมิน</div>
+      <div>
+        <h1 class="text-xl font-bold">ระบบจัดการร้าน</h1>
+        <p class="text-xs text-red-100">เลิศรสโรตี</p>
+      </div>
+    </div>
+    <button id="logoutBtn" class="bg-red-800 hover:bg-red-900 text-white px-6 py-2 rounded-full transition font-medium">
+      ออกจากระบบ
+    </button>
+  </div>
+</header>
+
+<main class="max-w-7xl mx-auto px-6 py-8">
+  
+  <!-- Stats Cards -->
+  <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8 fade-in">
+    <div class="bg-white p-6 rounded-xl shadow border-l-4 border-yellow-500 hover:shadow-md transition">
+      <p class="text-gray-500 text-sm font-medium">รอตรวจสอบ</p>
+      <p class="text-3xl font-bold text-gray-800 mt-1" id="statPending">0</p>
+      <p class="text-xs text-gray-400 mt-2">คำสั่งซื้อ</p>
+    </div>
+    <div class="bg-white p-6 rounded-xl shadow border-l-4 border-blue-500 hover:shadow-md transition">
+      <p class="text-gray-500 text-sm font-medium">กำลังทำ</p>
+      <p class="text-3xl font-bold text-gray-800 mt-1" id="statCooking">0</p>
+      <p class="text-xs text-gray-400 mt-2">คำสั่งซื้อ</p>
+    </div>
+    <div class="bg-white p-6 rounded-xl shadow border-l-4 border-green-500 hover:shadow-md transition">
+      <p class="text-gray-500 text-sm font-medium">ทำเสร็จวันนี้</p>
+      <p class="text-3xl font-bold text-gray-800 mt-1" id="statDone">0</p>
+      <p class="text-xs text-gray-400 mt-2">ออร์เดอร์</p>
+    </div>
+    <div class="bg-white p-6 rounded-xl shadow border-l-4 border-purple-500 hover:shadow-md transition">
+      <p class="text-gray-500 text-sm font-medium">ยอดขายวันนี้</p>
+      <p class="text-2xl font-bold text-purple-600 mt-1" id="statRevenue">0 บาท</p>
+      <p class="text-xs text-gray-400 mt-2">รวมทั้งหมด</p>
+    </div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="bg-white rounded-t-xl shadow border-b flex mb-0">
+    <button onclick="switchTab('orders')" id="tab-orders" class="flex-1 py-4 text-center tab-active hover:bg-gray-50 transition flex items-center justify-center gap-2">
+      <span>📋</span> คำสั่งซื้อ
+    </button>
+    <button onclick="switchTab('menus')" id="tab-menus" class="flex-1 py-4 text-center hover:bg-gray-50 transition flex items-center justify-center gap-2 text-gray-600">
+      <span>🍽️</span> จัดการเมนู
+    </button>
+  </div>
+
+  <!-- Orders Panel -->
+  <div id="panel-orders" class="bg-white rounded-b-xl shadow p-6 min-h-[400px]">
+    
+    <!-- Filter Bar -->
+    <div class="flex flex-wrap gap-4 mb-6 items-center bg-gray-50 p-4 rounded-lg">
+      <div class="flex items-center gap-2">
+        <label class="text-sm font-medium text-gray-600">กรองตามสถานะ:</label>
+        <select id="filterStatus" class="border rounded-lg px-4 py-2 bg-white focus:ring-2 focus:ring-red-500 outline-none" onchange="loadOrders()">
+          <option value="">ทั้งหมด</option>
+          <option value="รอตรวจสอบการชำระเงิน">รอตรวจสอบการชำระเงิน</option>
+          <option value="ชำระเงินแล้ว">ชำระเงินแล้ว</option>
+          <option value="กำลังทำ">กำลังทำ</option>
+          <option value="ทำเสร็จแล้ว">ทำเสร็จแล้ว</option>
+          <option value="ยกเลิกคำสั่งซื้อแล้ว">ยกเลิก</option>
+        </select>
+      </div>
+      <button onclick="loadOrders()" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition flex items-center gap-2 font-medium">
+        <span>🔄</span> รีเฟรช
+      </button>
+      <span id="lastUpdated" class="text-xs text-gray-400 ml-auto">อัปเดต: -</span>
+    </div>
+
+    <!-- Orders List -->
+    <div id="ordersList" class="space-y-4">
+      <div class="text-center py-12 text-gray-500">
+        <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-red-600 mb-2"></div>
+        <p>กำลังโหลดคำสั่งซื้อ...</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Menus Panel -->
+  <div id="panel-menus" class="hidden bg-white rounded-b-xl shadow p-6 min-h-[400px]">
+    <div class="grid lg:grid-cols-2 gap-8">
+      
+      <!-- Add Menu Form -->
+      <div class="bg-gradient-to-br from-orange-50 to-amber-50 p-6 rounded-xl border border-orange-100">
+        <h3 class="font-bold text-xl mb-6 text-gray-800 flex items-center gap-2">
+          <span class="bg-red-600 text-white w-8 h-8 rounded-full flex items-center justify-center text-sm">+</span>
+          เพิ่มเมนูใหม่
+        </h3>
+        
+        <div class="space-y-5">
+          <div>
+            <label class="block text-sm font-medium mb-2 text-gray-700">ชื่อเมนู <span class="text-red-500">*</span></label>
+            <input id="menuName" type="text" class="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none transition" placeholder="เช่น โรตีกล้วยหอม">
+          </div>
+          
+          <div>
+            <label class="block text-sm font-medium mb-2 text-gray-700">ราคา (บาท) <span class="text-red-500">*</span></label>
+            <input id="menuPrice" type="number" class="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none transition" placeholder="30">
+          </div>
+          
+          <div>
+            <label class="block text-sm font-medium mb-2 text-gray-700">ชื่อไฟล์รูปภาพ</label>
+            <div class="relative">
+              <input id="menuImageFile" type="text" class="w-full border border-gray-300 rounded-lg p-3 pl-10 focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none transition" placeholder="เช่น roti-banana.jpg">
+              <span class="absolute left-3 top-3.5 text-gray-400">🖼️</span>
+            </div>
+            <div class="mt-2 p-3 bg-blue-50 rounded-lg border border-blue-100">
+              <p class="text-xs text-blue-800 flex items-start gap-2">
+                <span class="text-lg">💡</span>
+                <span>
+                  <strong>วิธีใช้:</strong> อัปโหลดรูปไปที่โฟลเดอร์ <code class="bg-white px-1 rounded">/images/</code> ใน Firebase Hosting ก่อน<br>
+                  ตัวอย่างชื่อไฟล์: <code class="bg-white px-1 rounded">roti.jpg</code>, <code class="bg-white px-1 rounded">roti-milo.png</code>
+                </span>
+              </p>
+            </div>
+          </div>
+          
+          <!-- Preview Image -->
+          <div id="imagePreview" class="hidden fade-in">
+            <label class="block text-sm font-medium mb-2 text-gray-700">ตัวอย่างรูปภาพ:</label>
+            <div class="relative w-full h-48 bg-gray-100 rounded-lg overflow-hidden border-2 border-dashed border-gray-300 flex items-center justify-center">
+              <img id="previewImg" src="" class="w-full h-full object-cover" onerror="this.src='/images/no-image.jpg'">
+            </div>
+            <p class="text-xs text-gray-500 mt-1 text-center" id="previewFilename"></p>
+          </div>
+          
+          <button id="addMenuBtn" class="w-full bg-red-600 hover:bg-red-700 text-white py-3 rounded-lg font-semibold transition shadow-lg hover:shadow-xl transform hover:-translate-y-0.5">
+            เพิ่มเมนูเข้าระบบ
+          </button>
+        </div>
+      </div>
+
+      <!-- Menu List -->
+      <div>
+        <h3 class="font-bold text-xl mb-6 text-gray-800 flex items-center gap-2">
+          <span>📋</span> เมนูทั้งหมด
+          <span id="menuCount" class="bg-gray-200 text-gray-700 text-sm px-2 py-1 rounded-full">0 รายการ</span>
+        </h3>
+        
+        <div id="menusList" class="space-y-3 max-h-[600px] overflow-y-auto pr-2">
+          <!-- Menu items loaded here -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<script type="module">
+import { auth, ADMIN_EMAIL, getAllOrders, updateOrderStatus, getMenuItems, addMenuItem, deleteMenuItem, logoutUser, DEFAULT_IMAGE } from "./firebase.js";
+import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+
+let currentTab = 'orders';
+
+window.switchTab = (tab) => {
+  currentTab = tab;
+  
+  // Update tab styles
+  document.querySelectorAll('[id^="tab-"]').forEach(el => {
+    el.classList.remove('tab-active');
+    el.classList.add('text-gray-600');
+  });
+  document.getElementById(`tab-${tab}`).classList.add('tab-active');
+  document.getElementById(`tab-${tab}`).classList.remove('text-gray-600');
+  
+  // Show/hide panels
+  if (tab === 'orders') {
+    document.getElementById('panel-orders').classList.remove('hidden');
+    document.getElementById('panel-menus').classList.add('hidden');
+    loadOrders();
+  } else {
+    document.getElementById('panel-orders').classList.add('hidden');
+    document.getElementById('panel-menus').classList.remove('hidden');
+    loadMenus();
+  }
+};
+
+async function loadOrders() {
+  const filter = document.getElementById('filterStatus').value;
+  const list = document.getElementById('ordersList');
+  
+  list.innerHTML = `
+    <div class="text-center py-12 text-gray-500">
+      <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-red-600 mb-2"></div>
+      <p>กำลังโหลด...</p>
+    </div>
+  `;
+  
+  try {
+    const orders = await getAllOrders(filter || null);
+    updateStats(orders);
+    
+    if (orders.length === 0) {
+      list.innerHTML = `
+        <div class="text-center py-12 text-gray-400 bg-gray-50 rounded-xl">
+          <p class="text-4xl mb-2">📭</p>
+          <p>ไม่มีคำสั่งซื้อในระบบ</p>
+        </div>
+      `;
+      return;
+    }
+    
+    list.innerHTML = orders.map(o => {
+      const date = o.createdAt?.toDate ? o.createdAt.toDate().toLocaleString('th-TH', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      }) : '-';
+      
+      const statusColors = {
+        'รอตรวจสอบการชำระเงิน': 'bg-yellow-100 text-yellow-800 border-yellow-200',
+        'ชำระเงินแล้ว': 'bg-blue-100 text-blue-800 border-blue-200',
+        'กำลังทำ': 'bg-orange-100 text-orange-800 border-orange-200',
+        'ทำเสร็จแล้ว': 'bg-green-100 text-green-800 border-green-200',
+        'ยกเลิกคำสั่งซื้อแล้ว': 'bg-red-100 text-red-800 border-red-200'
+      };
+      
+      const statusColor = statusColors[o.status] || 'bg-gray-100 text-gray-800 border-gray-200';
+      const isDone = o.status === 'ทำเสร็จแล้ว' || o.status === 'ยกเลิกคำสั่งซื้อแล้ว';
+      
+      return `
+        <div class="border rounded-xl p-5 hover:shadow-lg transition bg-white fade-in border-gray-200">
+          <div class="flex justify-between items-start mb-4">
+            <div class="flex-1">
+              <div class="flex items-center gap-3 mb-2">
+                <span class="font-bold text-lg text-gray-800">#${o.id.slice(-6).toUpperCase()}</span>
+                <span class="status-badge border ${statusColor}">${o.status}</span>
+              </div>
+              <div class="text-gray-600 text-sm space-y-1">
+                <p class="flex items-center gap-2">
+                  <span>👤</span> ${o.userName || o.userEmail}
+                </p>
+                <p class="flex items-center gap-2 text-gray-400">
+                  <span>🕒</span> ${date}
+                </p>
+              </div>
+            </div>
+            <div class="text-right">
+              <p class="text-2xl font-bold text-red-600">${o.total} บาท</p>
+              <p class="text-xs text-gray-400">${o.items?.length || 0} รายการ</p>
+            </div>
+          </div>
+          
+          <!-- Items Detail -->
+          <div class="bg-gray-50 rounded-lg p-4 mb-4">
+            <p class="text-sm font-semibold text-gray-700 mb-2">รายการอาหาร:</p>
+            <div class="space-y-2">
+              ${(o.items || []).map(i => `
+                <div class="flex justify-between items-center text-sm">
+                  <div class="flex items-center gap-2">
+                    <img src="${i.imageUrl || DEFAULT_IMAGE}" class="w-8 h-8 rounded object-cover bg-gray-200" onerror="this.src='${DEFAULT_IMAGE}'">
+                    <div>
+                      <span class="font-medium text-gray-800">${i.name}</span>
+                      <span class="text-gray-500">x ${i.qty}</span>
+                      ${i.note ? `<span class="text-xs text-orange-600 bg-orange-50 px-2 py-0.5 rounded ml-1">(${i.note})</span>` : ''}
+                    </div>
+                  </div>
+                  <span class="font-medium text-gray-700">${i.price * i.qty} บาท</span>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+          
+          <!-- Action Buttons -->
+          ${!isDone ? `
+            <div class="flex gap-2 pt-2 border-t border-gray-100">
+              <select onchange="updateStatus('${o.id}', this.value)" 
+                      class="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-red-500 outline-none bg-white">
+                <option value="">เปลี่ยนสถานะ...</option>
+                <option value="รอตรวจสอบการชำระเงิน" ${o.status === 'รอตรวจสอบการชำระเงิน' ? 'disabled' : ''}>⏳ รอตรวจสอบการชำระเงิน</option>
+                <option value="ชำระเงินแล้ว" ${o.status === 'ชำระเงินแล้ว' ? 'disabled' : ''}>💳 ชำระเงินแล้ว</option>
+                <option value="กำลังทำ" ${o.status === 'กำลังทำ' ? 'disabled' : ''}>👨‍🍳 กำลังทำ</option>
+                <option value="ทำเสร็จแล้ว" ${o.status === 'ทำเสร็จแล้ว' ? 'disabled' : ''}>✅ ทำเสร็จแล้ว</option>
+                <option value="ยกเลิกคำสั่งซื้อแล้ว">❌ ยกเลิกคำสั่งซื้อ</option>
+              </select>
+            </div>
+          ` : '<div class="text-center text-xs text-gray-400 pt-2 border-t border-gray-100">ออร์เดอร์นี้เสร็จสิ้นแล้ว</div>'}
+        </div>
+      `;
+    }).join('');
+    
+    // Update timestamp
+    const now = new Date();
+    document.getElementById('lastUpdated').textContent = `อัปเดต: ${now.toLocaleTimeString('th-TH')}`;
+    
+  } catch (err) {
+    list.innerHTML = `
+      <div class="text-center py-12 text-red-500 bg-red-50 rounded-xl">
+        <p class="text-4xl mb-2">⚠️</p>
+        <p>เกิดข้อผิดพลาด: ${err.message}</p>
+        <button onclick="loadOrders()" class="mt-4 bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700">ลองใหม่</button>
+      </div>
+    `;
+  }
+}
+
+window.updateStatus = async (orderId, status) => {
+  if (!status) return;
+  if (!confirm(`ต้องการเปลี่ยนสถานะออร์เดอร์ #${orderId.slice(-6).toUpperCase()} เป็น "${status}" ใช่หรือไม่?`)) {
+    // Reset select
+    event.target.value = "";
+    return;
+  }
+  
+  try {
+    await updateOrderStatus(orderId, status);
+    showToast('✅ อัปเดตสถานะเรียบร้อยแล้ว');
+    loadOrders();
+  } catch (err) {
+    alert('❌ ไม่สำเร็จ: ' + err.message);
+  }
+};
+
+function updateStats(orders) {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  
+  document.getElementById('statPending').textContent = orders.filter(o => o.status === 'รอตรวจสอบการชำระเงิน').length;
+  document.getElementById('statCooking').textContent = orders.filter(o => o.status === 'กำลังทำ').length;
+  document.getElementById('statDone').textContent = orders.filter(o => {
+    if (o.status !== 'ทำเสร็จแล้ว') return false;
+    const orderDate = o.updatedAt?.toDate ? o.updatedAt.toDate() : null;
+    return orderDate && orderDate >= today;
+  }).length;
+  
+  const revenue = orders
+    .filter(o => o.status !== 'ยกเลิกคำสั่งซื้อแล้ว')
+    .reduce((sum, o) => sum + (o.total || 0), 0);
+  document.getElementById('statRevenue').textContent = revenue.toLocaleString('th-TH') + ' บาท';
+}
+
+async function loadMenus() {
+  const list = document.getElementById('menusList');
+  list.innerHTML = '<div class="text-center py-8 text-gray-500">กำลังโหลดเมนู...</div>';
+  
+  try {
+    const menus = await getMenuItems(false);
+    document.getElementById('menuCount').textContent = `${menus.length} รายการ`;
+    
+    if (menus.length === 0) {
+      list.innerHTML = `
+        <div class="text-center py-12 text-gray-400 bg-gray-50 rounded-xl">
+          <p class="text-4xl mb-2">🍽️</p>
+          <p>ยังไม่มีเมนูในระบบ</p>
+        </div>
+      `;
+      return;
+    }
+    
+    list.innerHTML = menus.map(m => {
+      const imgUrl = m.imageFile ? `/images/${m.imageFile}` : DEFAULT_IMAGE;
+      return `
+        <div class="flex items-center justify-between p-4 border rounded-xl ${m.active === false ? 'opacity-50 bg-gray-100' : 'bg-white hover:shadow-md transition'} fade-in">
+          <div class="flex items-center gap-4">
+            <div class="w-16 h-16 rounded-lg overflow-hidden bg-gray-200 border border-gray-200 flex-shrink-0">
+              <img src="${imgUrl}" 
+                   alt="${m.name}" 
+                   class="w-full h-full object-cover"
+                   onerror="this.src='${DEFAULT_IMAGE}'">
+            </div>
+            <div>
+              <p class="font-bold text-gray-800 text-lg ${m.active === false ? 'line-through' : ''}">${m.name}</p>
+              <p class="text-red-600 font-semibold">${m.price} บาท</p>
+              ${m.active === false ? '<span class="text-xs bg-red-100 text-red-600 px-2 py-1 rounded-full mt-1 inline-block">ถูกลบแล้ว</span>' : ''}
+            </div>
+          </div>
+          
+          ${m.active !== false ? `
+            <button onclick="deleteMenu('${m.id}', '${m.name}')" 
+                    class="text-red-600 hover:bg-red-50 px-4 py-2 rounded-lg transition flex items-center gap-1 font-medium">
+              <span>🗑️</span> ลบ
+            </button>
+          ` : ''}
+        </div>
+      `;
+    }).join('');
+  } catch (err) {
+    list.innerHTML = `
+      <div class="text-center py-12 text-red-500 bg-red-50 rounded-xl">
+        <p>❌ โหลดเมนูไม่สำเร็จ: ${err.message}</p>
+      </div>
+    `;
+  }
+}
+
+window.deleteMenu = async (id, name) => {
+  if (!confirm(`ต้องการลบเมนู "${name}" ใช่หรือไม่?\n\nหมายเหตุ: ออร์เดอร์เก่าที่สั่งเมนูนี้ยังคงเห็นข้อมูลอยู่`)) return;
+  
+  try {
+    await deleteMenuItem(id);
+    showToast(`✅ ลบเมนู "${name}" เรียบร้อยแล้ว`);
+    loadMenus();
+  } catch (err) {
+    alert('❌ ไม่สำเร็จ: ' + err.message);
+  }
+};
+
+// Image Preview functionality
+document.getElementById('menuImageFile').addEventListener('input', (e) => {
+  const filename = e.target.value.trim();
+  const previewDiv = document.getElementById('imagePreview');
+  const previewImg = document.getElementById('previewImg');
+  const previewText = document.getElementById('previewFilename');
+  
+  if (filename) {
+    previewDiv.classList.remove('hidden');
+    previewImg.src = `/images/${filename}`;
+    previewText.textContent = `ไฟล์: ${filename}`;
+    
+    previewImg.onerror = () => {
+      previewImg.src = DEFAULT_IMAGE;
+      previewText.textContent = `ไม่พบไฟล์: ${filename} (จะใช้รูปเริ่มต้น)`;
+      previewText.classList.add('text-red-500');
+    };
+  } else {
+    previewDiv.classList.add('hidden');
+    previewText.classList.remove('text-red-500');
+  }
+});
+
+// Add Menu
+document.getElementById('addMenuBtn').onclick = async () => {
+  const name = document.getElementById('menuName').value.trim();
+  const price = document.getElementById('menuPrice').value;
+  const imageFile = document.getElementById('menuImageFile').value.trim();
+  
+  if (!name) {
+    alert('❌ กรุณากรอกชื่อเมนู');
+    return;
+  }
+  if (!price || price <= 0) {
+    alert('❌ กรุณากรอกราคาให้ถูกต้อง');
+    return;
+  }
+  
+  const btn = document.getElementById('addMenuBtn');
+  const originalText = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = 'กำลังเพิ่ม...';
+  btn.classList.add('opacity-75');
+  
+  try {
+    await addMenuItem(name, price, imageFile || 'no-image.jpg');
+    showToast(`✅ เพิ่มเมนู "${name}" สำเร็จ`);
+    
+    // Clear form
+    document.getElementById('menuName').value = '';
+    document.getElementById('menuPrice').value = '';
+    document.getElementById('menuImageFile').value = '';
+    document.getElementById('imagePreview').classList.add('hidden');
+    
+    loadMenus();
+  } catch (err) {
+    alert('❌ ' + err.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = originalText;
+    btn.classList.remove('opacity-75');
+  }
+};
+
+function showToast(message) {
+  const toast = document.createElement("div");
+  toast.className = "fixed bottom-4 right-4 bg-green-600 text-white px-6 py-3 rounded-lg shadow-lg z-50 fade-in flex items-center gap-2 font-medium";
+  toast.innerHTML = `<span>${message}</span>`;
+  document.body.appendChild(toast);
+  setTimeout(() => {
+    toast.style.opacity = "0";
+    toast.style.transform = "translateY(10px)";
+    setTimeout(() => toast.remove(), 300);
+  }, 3000);
+}
+
+// Logout
+document.getElementById('logoutBtn').onclick = async () => {
+  if (!confirm('ต้องการออกจากระบบใช่หรือไม่?')) return;
+  try {
+    await logoutUser();
+    window.location.href = 'index.html';
+  } catch (err) {
+    alert('❌ ' + err.message);
+  }
+};
+
+// Auth check
+onAuthStateChanged(auth, (user) => {
+  if (!user || user.email !== ADMIN_EMAIL) {
+    alert('หน้านี้สำหรับผู้ดูแลระบบเท่านั้น');
+    window.location.href = 'index.html';
+    return;
+  }
+  loadOrders();
+});
+</script>
+</body>
+</html>

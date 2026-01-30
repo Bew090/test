@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>เมนูโรตี | เลิศรสโรตี</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: "Prompt", sans-serif; }
+    .gradient-header {
+      background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+    }
+    .menu-card {
+      transition: all 0.3s ease;
+    }
+    .menu-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    }
+  </style>
+</head>
+<body class="bg-gradient-to-br from-orange-50 to-amber-100 min-h-screen">
+
+  <!-- Header -->
+  <header class="gradient-header text-white shadow-lg sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
+      <div class="flex items-center space-x-3">
+        <span class="text-3xl">🥐</span>
+        <div>
+          <h1 class="text-xl font-bold">เลิศรสโรตี</h1>
+          <p class="text-xs opacity-90">โรตีสดใหม่ทุกวัน</p>
+        </div>
+      </div>
+
+      <nav class="flex items-center space-x-2">
+        <a href="menu.html" class="bg-white text-red-700 px-4 py-2 rounded-full text-sm font-semibold hover:bg-red-50 transition">
+          🏠 เมนู
+        </a>
+        <a href="cart.html" class="bg-white text-red-700 px-4 py-2 rounded-full text-sm font-semibold hover:bg-red-50 transition relative">
+          🛒 ตะกร้า
+          <span id="cartBadge" class="hidden absolute -top-2 -right-2 bg-yellow-400 text-red-700 text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center">0</span>
+        </a>
+        <a href="orders.html" class="bg-white text-red-700 px-4 py-2 rounded-full text-sm font-semibold hover:bg-red-50 transition">
+          📦 คำสั่งซื้อ
+        </a>
+        <button id="logoutBtn" class="bg-yellow-400 text-red-700 px-4 py-2 rounded-full text-sm font-bold hover:bg-yellow-300 transition">
+          🚪 ออกจากระบบ
+        </button>
+      </nav>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="max-w-7xl mx-auto px-4 py-8">
+    <!-- Welcome Section -->
+    <div class="bg-white rounded-2xl shadow-lg p-6 mb-8">
+      <h2 class="text-2xl font-bold text-red-700 mb-2">🎉 ยินดีต้อนรับสู่เลิศรสโรตี</h2>
+      <p class="text-gray-600">เลือกเมนูโรตีแสนอร่อยของเรา พร้อมท็อปปิ้งหลากหลาย</p>
+    </div>
+
+    <!-- Loading State -->
+    <div id="loadingState" class="text-center py-20">
+      <div class="animate-spin rounded-full h-16 w-16 border-b-4 border-red-600 mx-auto mb-4"></div>
+      <p class="text-gray-600 font-semibold">กำลังโหลดเมนู...</p>
+    </div>
+
+    <!-- Menu Grid -->
+    <div id="menuGrid" class="hidden grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+      <!-- เมนูจะถูกโหลดจาก Firestore -->
+    </div>
+
+    <!-- Empty State -->
+    <div id="emptyState" class="hidden text-center py-20">
+      <span class="text-6xl mb-4 block">😢</span>
+      <p class="text-xl text-gray-600 font-semibold">ยังไม่มีเมนูในขณะนี้</p>
+      <p class="text-gray-500 mt-2">กรุณารอสักครู่หรือติดต่อแอดมิน</p>
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <footer class="bg-gray-800 text-white py-8 mt-20">
+    <div class="max-w-7xl mx-auto px-4 text-center">
+      <div class="mb-4">
+        <span class="text-4xl">🥐</span>
+        <h3 class="text-xl font-bold mt-2">ร้านเลิศรสโรตี</h3>
+      </div>
+      <div class="space-y-2 text-sm">
+        <p>📍 หน้าโรงเรียนเทศบาล 3</p>
+        <p>91 ถนนสิหราชเดโช ตำบลทะเลชุบศร อำเภอเมือง ลพบุรี</p>
+        <p>☎ โทร 062-248-7887</p>
+      </div>
+      <div class="mt-6 text-xs text-gray-400">
+        <p>© 2026 เลิศรสโรตี - โรตีสดใหม่ทุกวัน</p>
+      </div>
+    </div>
+  </footer>
+
+  <script type="module">
+    import { auth, logoutUser, getMenuItems } from "./firebase.js";
+    import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+
+    const menuGrid = document.getElementById("menuGrid");
+    const loadingState = document.getElementById("loadingState");
+    const emptyState = document.getElementById("emptyState");
+    const logoutBtn = document.getElementById("logoutBtn");
+    const cartBadge = document.getElementById("cartBadge");
+
+    let cart = JSON.parse(localStorage.getItem("cart")) || [];
+
+    // Update cart badge
+    function updateCartBadge() {
+      const totalItems = cart.reduce((sum, item) => sum + item.qty, 0);
+      if (totalItems > 0) {
+        cartBadge.textContent = totalItems;
+        cartBadge.classList.remove("hidden");
+      } else {
+        cartBadge.classList.add("hidden");
+      }
+    }
+
+    // Render menus from Firestore (ไม่ใช้ Storage)
+    async function renderMenus() {
+      loadingState.classList.remove("hidden");
+      menuGrid.classList.add("hidden");
+      emptyState.classList.add("hidden");
+
+      try {
+        // ดึงข้อมูลจาก Firestore ผ่าน getMenuItems (ไม่เกี่ยวกับ Storage)
+        const menus = await getMenuItems();
+        
+        loadingState.classList.add("hidden");
+
+        if (!menus || menus.length === 0) {
+          emptyState.classList.remove("hidden");
+          return;
+        }
+
+        menuGrid.classList.remove("hidden");
+        menuGrid.innerHTML = "";
+
+        menus.forEach(item => {
+          const card = document.createElement("div");
+          card.className = "menu-card bg-white rounded-xl shadow-lg overflow-hidden";
+          
+          // ใช้ imageUrl จาก Firestore (อาจเป็น URL ภายนอก หรือ URL ที่เก็บไว้ใน Firestore)
+          // ไม่มีการดึงรูปจาก Firebase Storage
+          const imgSrc = item.imageUrl || "https://via.placeholder.com/400x300/ff6b6b/ffffff?text=โรตี";
+          
+          card.innerHTML = `
+            <div class="relative h-48 overflow-hidden">
+              <img src="${imgSrc}" alt="${item.name}" class="w-full h-full object-cover" onerror="this.src='https://via.placeholder.com/400x300/ff6b6b/ffffff?text=โรตี'">
+              <div class="absolute top-2 right-2 bg-red-600 text-white px-3 py-1 rounded-full text-sm font-bold">
+                ${item.price} บาท
+              </div>
+            </div>
+            
+            <div class="p-5">
+              <h3 class="text-xl font-bold text-gray-800 mb-3">${item.name}</h3>
+              
+              <div class="space-y-3">
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">จำนวน</label>
+                  <input 
+                    type="number" 
+                    min="1" 
+                    value="1" 
+                    id="qty-${item.id}"
+                    class="w-full border-2 border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                  >
+                </div>
+                
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">หมายเหตุ (ถ้ามี)</label>
+                  <input 
+                    type="text" 
+                    id="note-${item.id}" 
+                    placeholder="เช่น ไม่ใส่นมข้นหวาน"
+                    class="w-full border-2 border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                  >
+                </div>
+                
+                <button 
+                  class="addBtn w-full bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white py-3 rounded-lg font-semibold transition transform hover:scale-[1.02] shadow-md"
+                >
+                  🛒 เพิ่มลงตะกร้า
+                </button>
+              </div>
+            </div>
+          `;
+          
+          menuGrid.appendChild(card);
+
+          // Add to cart handler
+          card.querySelector(".addBtn").onclick = () => {
+            const qty = parseInt(document.getElementById(`qty-${item.id}`).value) || 1;
+            const note = document.getElementById(`note-${item.id}`).value.trim() || "";
+            addToCart(item.id, item.name, item.price, qty, note, item.imageUrl);
+          };
+        });
+
+      } catch (err) {
+        console.error("Error loading menus:", err);
+        loadingState.classList.add("hidden");
+        emptyState.classList.remove("hidden");
+        alert("❌ โหลดเมนูไม่สำเร็จ: " + err.message);
+      }
+    }
+
+    function addToCart(id, name, price, qty = 1, note = "", imageUrl = "") {
+      // Check if item with same id and note exists
+      const existing = cart.find(it => it.id === id && it.note === note);
+      
+      if (existing) {
+        existing.qty = Number(existing.qty) + Number(qty);
+      } else {
+        cart.push({ 
+          id, 
+          name, 
+          price: Number(price), 
+          qty: Number(qty), 
+          note, 
+          imageUrl 
+        });
+      }
+      
+      localStorage.setItem("cart", JSON.stringify(cart));
+      updateCartBadge();
+      
+      // Success animation
+      const notification = document.createElement("div");
+      notification.className = "fixed bottom-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 animate-bounce";
+      notification.innerHTML = `✅ เพิ่ม ${name} ลงตะกร้าแล้ว`;
+      document.body.appendChild(notification);
+      
+      setTimeout(() => {
+        notification.remove();
+      }, 2000);
+    }
+
+    // Logout handler (ใช้ Firebase Auth เหมือนเดิม)
+    logoutBtn.onclick = async () => {
+      if (!confirm("🤔 คุณต้องการออกจากระบบใช่หรือไม่?")) return;
+      
+      try {
+        await logoutUser(); // จาก firebase.js
+        alert("✅ ออกจากระบบเรียบร้อย");
+        window.location.href = "index.html";
+      } catch (err) {
+        alert("❌ ออกจากระบบไม่สำเร็จ: " + err.message);
+      }
+    };
+
+    // Auth state observer (Firebase Auth เหมือนเดิม)
+    onAuthStateChanged(auth, (user) => {
+      if (!user) {
+        // Allow guest viewing but show notification
+        const guestBanner = document.createElement("div");
+        guestBanner.className = "bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-4 rounded";
+        guestBanner.innerHTML = `
+          <p class="font-bold">⚠️ คุณยังไม่ได้เข้าสู่ระบบ</p>
+          <p class="text-sm">เข้าสู่ระบบเพื่อสั่งซื้อโรตี <a href="index.html" class="underline font-semibold hover:text-yellow-800">คลิกที่นี่</a></p>
+        `;
+        document.querySelector("main").prepend(guestBanner);
+      }
+      
+      renderMenus();
+      updateCartBadge();
+    });
+  </script>
+</body>
+</html>
